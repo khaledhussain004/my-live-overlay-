@@ -1,170 +1,48 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html>
 <head>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LIVE CONTROLLER PANEL</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --bg: #0b1329; --panel: #1c2541; --accent: #3a86ff; --text: #f8fafc; --success: #38b000; }
-        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; padding-bottom: 90px; }
-        h2 { text-align: center; color: #00b4d8; margin: 0 0 15px 0; font-size: 18px; text-transform: uppercase; letter-spacing: 1px; }
-        
-        .tabs { display: flex; gap: 4px; margin-bottom: 15px; background: #111a36; padding: 4px; border-radius: 8px; }
-        .tab-btn { background: transparent; color: #a3b18a; border: none; padding: 12px 5px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; flex: 1; text-align: center; transition: 0.2s; }
-        .tab-btn.active { background: var(--accent); color: #fff; }
-        
-        .tab-content { display: none; background: var(--panel); padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-
-        .form-group { margin-bottom: 12px; }
-        label { display: block; margin-bottom: 6px; font-size: 13px; color: #94a3b8; font-weight: 500; }
-        input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 12px; background: #0b1329; border: 1px solid #475569; border-radius: 6px; color: #fff; box-sizing: border-box; font-size: 14px; }
-        
-        .flex-group { display: flex; gap: 10px; }
-        .flex-group > div { flex: 1; }
-        
-        .switch-group { display: flex; align-items: center; justify-content: space-between; background: #0b1329; padding: 12px; border-radius: 6px; margin-top: 5px; border: 1px solid #1e293b; }
-        .switch-group input[type="checkbox"] { width: 24px; height: 24px; cursor: pointer; }
-
-        .btn-container { position: fixed; bottom: 0; left: 0; width: 100%; background: #0b1329; padding: 12px; box-sizing: border-box; border-top: 1px solid #1e293b; z-index: 999; }
-        .save-btn { width: 100%; background: var(--success); color: white; border: none; padding: 14px; font-size: 15px; font-weight: bold; border-radius: 6px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
-        .status-bar { text-align: center; font-size: 12px; color: #00b4d8; font-weight: bold; margin-top: 6px; }
+        body { font-family: sans-serif; background: #1a1a1a; color: #fff; padding: 15px; }
+        .card { background: #333; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+        input, select, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: none; }
+        button { background: #007bff; color: #fff; font-weight: bold; }
     </style>
 </head>
 <body>
-
-    <h2>LIVE CONTROLLER PANEL</h2>
-
-    <div class="tabs">
-        <button type="button" class="tab-btn active" id="btn-score" onclick="switchTab('score')">Score</button>
-        <button type="button" class="tab-btn" id="btn-logos" onclick="switchTab('logos')">Logos</button>
-        <button type="button" class="tab-btn" id="btn-squad" onclick="switchTab('squad')">Squad</button>
-        <button type="button" class="tab-btn" id="btn-ticker" onclick="switchTab('ticker')">Ticker</button>
+    <h2>Overlay Control Panel</h2>
+    <div class="card">
+        <input type="text" id="teamA" placeholder="Team A Name">
+        <input type="text" id="teamB" placeholder="Team B Name">
+        <input type="color" id="themeColor">
+        <button onclick="updateData()">Update Scores & Theme</button>
     </div>
 
-    <div id="tab-score" class="tab-content" style="display: block;">
-        <div class="switch-group">
-            <label for="show_scoreboard" style="color:#fff; font-weight:bold; margin:0;">Show Scoreboard</label>
-            <input type="checkbox" id="show_scoreboard" checked>
-        </div>
-        <br>
-        <div class="flex-group">
-            <div class="form-group">
-                <label>Team A Name</label>
-                <input type="text" id="team_a" value="TEAM A">
-            </div>
-            <div class="form-group" style="max-width: 90px;">
-                <label>Score A</label>
-                <input type="text" id="score_a" value="0">
-            </div>
-        </div>
-        <div class="flex-group">
-            <div class="form-group">
-                <label>Team B Name</label>
-                <input type="text" id="team_b" value="TEAM B">
-            </div>
-            <div class="form-group" style="max-width: 90px;">
-                <label>Score B</label>
-                <input type="text" id="score_b" value="0">
-            </div>
-        </div>
-        <div class="flex-group">
-            <div class="form-group">
-                <label>Match Time (MM:SS)</label>
-                <input type="text" id="match_time" value="00:00">
-            </div>
-            <div class="form-group">
-                <label>Period / Half</label>
-                <select id="period">
-                    <option value="1st Half">1st Half</option>
-                    <option value="2nd Half">2nd Half</option>
-                    <option value="Extra Time">Extra Time</option>
-                </select>
-            </div>
-        </div>
-        <div class="switch-group">
-            <label for="timer_run" style="margin:0;">Timer Run / Pause</label>
-            <input type="checkbox" id="timer_run" onchange="toggleTimer()">
-        </div>
-    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
-    <div id="tab-logos" class="tab-content">
-        <div class="form-group">
-            <label>Logo 1 URL</label>
-            <input type="text" id="logo1_url" placeholder="https://...">
-            <div class="switch-group">
-                <label for="logo1_on" style="margin:0;">Logo 1 On/Off</label>
-                <input type="checkbox" id="logo1_on">
-            </div>
-        </div>
-        <hr style="border: 0; border-top: 1px solid #475569; margin: 15px 0;">
-        <div class="form-group">
-            <label>Logo 2 URL</label>
-            <input type="text" id="logo2_url" placeholder="https://...">
-            <div class="switch-group">
-                <label for="logo2_on" style="margin:0;">Logo 2 On/Off</label>
-                <input type="checkbox" id="logo2_on">
-            </div>
-        </div>
-    </div>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA2tP0hFu0r9mDNT8uBX-ajXAg5Sv4UcxY",
+            authDomain: "svlive-a3c16.firebaseapp.com",
+            databaseURL: "https://svlive-a3c16-default-rtdb.firebaseio.com",
+            projectId: "svlive-a3c16",
+            storageBucket: "svlive-a3c16.firebasestorage.app",
+            messagingSenderId: "392364721886",
+            appId: "1:392364721886:web:e374d5a5f185d6b56a644f"
+        };
 
-    <div id="tab-squad" class="tab-content">
-        <div class="switch-group" style="margin-bottom: 12px;">
-            <label for="lineup_on" style="color:#fff; font-weight:bold; margin:0;">Show Squad Panel</label>
-            <input type="checkbox" id="lineup_on">
-        </div>
-        <div class="form-group">
-            <label>Lineup Title</label>
-            <input type="text" id="lineup_title" value="Player Squad">
-        </div>
-        <div class="form-group">
-            <label>Players List (1 line per player)</label>
-            <textarea id="lineup_players" style="height:100px; font-family:inherit; color:white; background:#0b1329; width:100%; padding:10px; border-radius:6px; border:1px solid #475569;" placeholder="1. Player Name"></textarea>
-        </div>
-    </div>
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
 
-    <div id="tab-ticker" class="tab-content">
-        <div class="form-group">
-            <label>Scrolling Ticker Text</label>
-            <input type="text" id="ticker_text" placeholder="এখানে ব্রেकिंग নিউজ লিখুন...">
-        </div>
-        <div class="form-group">
-            <label>Ticker Speed (Seconds)</label>
-            <input type="number" id="ticker_speed" value="15">
-        </div>
-        <div class="switch-group">
-            <label for="ticker_on" style="margin:0;">Ticker On/Off</label>
-            <input type="checkbox" id="ticker_on">
-        </div>
-    </div>
-
-    <div class="btn-container">
-        <button type="button" class="save-btn" onclick="saveData()">SAVE & UPDATE OVERLAY</button>
-        <div class="status-bar" id="status">Connecting to Supabase...</div>
-    </div>
-
-    <script>
-        const SUPABASE_URL = "https://exnedokvmwxhqcjsyvcq.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4bmVkb2t2bXd4aHFjanN5dmNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NTM2MzgsImV4cCI6MjA5NjIyOTYzOH0.D_-5dDNX58O-MnIWnAa1o0X_l84O4rxfh6GzyKzJWPA";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        
-        let timerSec = 0;
-        let timerInterval = null;
-
-        function switchTab(tabName) {
-            document.querySelectorAll(".tab-content").forEach(el => el.style.display = "none");
-            document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
-            
-            document.getElementById("tab-" + tabName).style.display = "block";
-            document.getElementById("btn-" + tabName).classList.add("active");
-        }
-
-        async function loadCloudData() {
-            try {
-                const { data, error } = await supabase.from('overlays').select('*').eq('id', 1).single();
-                if (data) {
-                    document.getElementById('show_scoreboard').checked = data.show_scoreboard;
-                    document.getElementById('team_a').value = data.team_a;
-                    document.getElementById('score_a').value = data.score_a;
-                    document.getElementById('team_b').value = data.team_b;
-                    document
+        window.updateData = () => {
+            set(ref(db, 'liveData'), {
+                teamAName: document.getElementById('teamA').value,
+                teamBName: document.getElementById('teamB').value,
+                color: document.getElementById('themeColor').value
+            });
+            alert("Data Updated!");
+        };
+    </script>
+</body>
+</html>
